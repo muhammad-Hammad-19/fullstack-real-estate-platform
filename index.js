@@ -2,9 +2,10 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import { connectDB } from "./db/db.js";
-import authRouter from "./routes/authRoutes.js";
+import authRoute from "./routes/authRoutes.js";
 import cookieParser from "cookie-parser";
 import userRoute from "./routes/userRoutes.js";
+import postRoute from "./routes/postRoutes.js";
 
 dotenv.config();
 
@@ -23,8 +24,8 @@ app.use(
 
 app.use(express.json());
 
-app.use("/api/auth", authRouter);
-
+app.use("/api/auth", authRoute);
+app.use("/api/post/", postRoute);
 app.use("/api/users", userRoute);
 
 connectDB();
