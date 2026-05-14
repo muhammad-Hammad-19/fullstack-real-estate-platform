@@ -28,8 +28,8 @@ export const getAllUsers = async (req, res) => {
 // GET SINGLE USER
 export const getUserById = async (req, res) => {
   try {
-    console.log();
 
+    
     const { id } = req.params;
 
     const user = await prisma.user.findUnique({
