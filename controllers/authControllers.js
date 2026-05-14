@@ -4,7 +4,7 @@ import { loginSchema, registerSchema } from "../validations/auth.validation.js";
 
 export const register = async (req, res) => {
   try {
-    console.log(req.body,"req body");
+    
     const { username, email, password, role } = req.body;
 
     const { error } = registerSchema.validate(req.body);
@@ -30,32 +30,46 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const { error } = loginSchema.validate(req.body);
-    if (error) return res.status(400).json({ message: error.message });
 
-    const result = await loginServices(email, password);
+    // Validation
+    const { error } = loginSchema.validate({
+      email,
+      password,
+    });
 
-    if (result.message == "Login successfull") {
-      res.cookie("token", result.token, {
-        httpOnly: true, // JS se access nahi hoga (secure)
-        secure: true, // https ke liye (production)
-        sameSite: "strict",
-        maxAge: 24 * 60 * 60 * 1000, // 1 day
-      });
-      return res.status(200).json({
-        success: result.success,
-        message: result.message,
-        data: result,
-      });
-    } else {
-      res.status(400).json({
-        success: result.success,
-        message: result.message,
-        data: result,
+    if (error) {
+      return res.status(400).json({
+        message: error.message,
       });
     }
+
+    // Login Service
+    const result = await loginServices(email, password);
+
+    if (!result.success) {
+      return res.status(400).json({
+        message: result.message,
+      });
+    }
+
+    // Set Cookie
+    res.cookie("token", result.token, {
+      httpOnly: true,
+      secure: false, // localhost ke liye false
+      sameSite: "strict",
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+
+    // Response
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      token: result.token,
+      userId: result.userId,
+    });
+
   } catch (error) {
-    return res.status(400).json({
+    res.status(500).json({
       success: false,
       message: error.message,
     });

@@ -1,13 +1,13 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import prisma from "../lib/prisma.js";
+
 const loginServices = async (email, password) => {
   try {
     const user = await prisma.user.findUnique({
       where: { email },
     });
 
-    const userId = user?.id;
     if (!user) {
       throw new Error("User not found");
     }
@@ -18,14 +18,21 @@ const loginServices = async (email, password) => {
       throw new Error("Invalid password");
     }
 
-    const token = jwt.sign({ email, password, userId }, process.env.JWT_SECRET);
-    
-    // 5. Return success response
+    const token = jwt.sign(
+      {
+        userId: user.id,
+        email: user.email,
+      },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "7d",
+      },
+    );
 
     return {
       success: true,
-      message: "Login successfull",
-      userId,
+      message: "Login successful",
+      userId: user.id,
       token,
     };
   } catch (error) {
