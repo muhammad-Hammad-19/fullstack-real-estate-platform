@@ -3,10 +3,11 @@ import jwt from "jsonwebtoken";
 import prisma from "../lib/prisma.js";
 const loginServices = async (email, password) => {
   try {
+    
     const user = await prisma.user.findUnique({
       where: { email },
     });
-    
+
     console.log(user);
 
     if (!user) {

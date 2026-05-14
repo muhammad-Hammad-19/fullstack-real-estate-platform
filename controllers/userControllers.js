@@ -3,16 +3,13 @@ import prisma from "../lib/prisma.js";
 // GET ALL USERS
 export const getAllUsers = async (req, res) => {
   try {
-    const loggedInUserId = req.user.id;
+    const loggedInUserId = req.user.email;
 
     const users = await prisma.user.findMany({
       where: {
-        id: {
+        email: {
           not: loggedInUserId,
         },
-      },
-      select: {
-        password: false,
       },
     });
 
@@ -31,14 +28,13 @@ export const getAllUsers = async (req, res) => {
 // GET SINGLE USER
 export const getUserById = async (req, res) => {
   try {
+    console.log();
+
     const { id } = req.params;
 
     const user = await prisma.user.findUnique({
       where: {
         id,
-      },
-      select: {
-        password: false,
       },
     });
 
@@ -71,9 +67,6 @@ export const updateUser = async (req, res) => {
         id,
       },
       data: req.body,
-      select: {
-        password: false,
-      },
     });
 
     res.status(200).json({
@@ -90,6 +83,7 @@ export const updateUser = async (req, res) => {
 };
 
 // DELETE USER
+
 export const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
@@ -104,6 +98,7 @@ export const deleteUser = async (req, res) => {
       success: true,
       message: "User deleted successfully",
     });
+    
   } catch (err) {
     res.status(500).json({
       success: false,
