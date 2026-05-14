@@ -28,11 +28,15 @@ const loginServices = async (username, password) => {
         expiresIn: "7d",
       },
     );
-
+    
     return {
       success: true,
-      message: "Login successful",
-      userId: user.id,
+      message: "Login successfull",
+      data: {
+        userId: user.id,
+        username: user.username,
+        email: user.email,
+      },
       token,
     };
   } catch (error) {

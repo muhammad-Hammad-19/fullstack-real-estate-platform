@@ -4,7 +4,6 @@ import { loginSchema, registerSchema } from "../validations/auth.validation.js";
 
 export const register = async (req, res) => {
   try {
-    
     const { username, email, password, role } = req.body;
 
     const { error } = registerSchema.validate(req.body);
@@ -12,13 +11,12 @@ export const register = async (req, res) => {
     if (error) return res.status(400).json({ message: error.message });
 
     const result = await registerService(username, email, password);
-    
+
     return res.status(201).json({
       success: true,
       message: "User registered successfully",
       data: result,
     });
-    
   } catch (error) {
     return res.status(400).json({
       success: false,
@@ -36,7 +34,6 @@ export const login = async (req, res) => {
       username,
       password,
     });
-
     if (error) {
       return res.status(400).json({
         message: error.message,
@@ -63,11 +60,11 @@ export const login = async (req, res) => {
     // Response
     res.status(200).json({
       success: true,
+      data: result.data,
       message: result.message,
       token: result.token,
       userId: result.userId,
     });
-
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -81,7 +78,7 @@ export const logout = async (req, res) => {
     secure: true, // same as login
     sameSite: "strict",
   });
-  
+
   return res.status(200).json({
     success: true,
     message: "Logged out successfully",
