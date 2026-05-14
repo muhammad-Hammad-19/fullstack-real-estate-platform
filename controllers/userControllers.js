@@ -1,13 +1,20 @@
-import User from "../models/user.model.js";
+import prisma from "../lib/prisma.js";
 
-// Get All Users
+// GET ALL USERS
 export const getAllUsers = async (req, res) => {
   try {
-    const loggedInUserId = req.user._id;
+    const loggedInUserId = req.user.id;
 
-    const users = await User.find({
-      _id: { $ne: loggedInUserId },
-    }).select("-password");
+    const users = await prisma.user.findMany({
+      where: {
+        id: {
+          not: loggedInUserId,
+        },
+      },
+      select: {
+        password: false,
+      },
+    });
 
     res.status(200).json({
       success: true,
@@ -21,12 +28,19 @@ export const getAllUsers = async (req, res) => {
   }
 };
 
-// Get Single User
+// GET SINGLE USER
 export const getUserById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const user = await User.findById(id).select("-password");
+    const user = await prisma.user.findUnique({
+      where: {
+        id,
+      },
+      select: {
+        password: false,
+      },
+    });
 
     if (!user) {
       return res.status(404).json({
@@ -47,22 +61,20 @@ export const getUserById = async (req, res) => {
   }
 };
 
-// Update User
+// UPDATE USER
 export const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const updatedUser = await User.findByIdAndUpdate(id, req.body, {
-      new: true,
-      runValidators: true,
-    }).select("-password");
-
-    if (!updatedUser) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
+    const updatedUser = await prisma.user.update({
+      where: {
+        id,
+      },
+      data: req.body,
+      select: {
+        password: false,
+      },
+    });
 
     res.status(200).json({
       success: true,
@@ -72,24 +84,21 @@ export const updateUser = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: err.code === "P2025" ? "User not found" : err.message,
     });
   }
 };
 
-// Delete User
+// DELETE USER
 export const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const deletedUser = await User.findByIdAndDelete(id);
-
-    if (!deletedUser) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
+    await prisma.user.delete({
+      where: {
+        id,
+      },
+    });
 
     res.status(200).json({
       success: true,
@@ -98,7 +107,7 @@ export const deleteUser = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: err.code === "P2025" ? "User not found" : err.message,
     });
   }
 };

@@ -1,15 +1,17 @@
-import User from "../models/user.model.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import prisma from "../lib/prisma.js";
 const loginServices = async (email, password) => {
   try {
-    const users = await User.find({ email });
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+    
+    console.log(user);
 
-    if (users.length === 0) {
+    if (!user) {
       throw new Error("User not found");
     }
-
-    const user = users[0];
 
     const isPasswordMatch = await bcrypt.compare(password, user.password);
 
@@ -19,7 +21,6 @@ const loginServices = async (email, password) => {
 
     const token = jwt.sign({ email, password }, process.env.JWT_SECRET);
 
-    
     // 5. Return success response
 
     return {

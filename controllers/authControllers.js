@@ -4,13 +4,14 @@ import { loginSchema, registerSchema } from "../validations/auth.validation.js";
 
 export const register = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    console.log(req.body,"req body");
+    const { username, email, password, role } = req.body;
 
     const { error } = registerSchema.validate(req.body);
 
     if (error) return res.status(400).json({ message: error.message });
 
-    const result = await registerService(name, email, password, role);
+    const result = await registerService(username, email, password);
     
     return res.status(201).json({
       success: true,
