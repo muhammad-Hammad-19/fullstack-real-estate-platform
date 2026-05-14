@@ -10,13 +10,11 @@ import {
 
 const router = express.Router();
 
-
 // GET ALL POSTS
 router.get("/", getPosts);
 
 // GET SINGLE POST
 router.get("/:id", getPost);
-
 
 // ADD NEW POST
 router.post("/", addPost);

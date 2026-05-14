@@ -25,7 +25,7 @@ app.use(
 app.use(express.json());
 
 app.use("/api/auth", authRoute);
-app.use("/api/posts/", postRoute);
+app.use("/api/posts", postRoute);
 app.use("/api/users", userRoute);
 
 connectDB();
@@ -33,7 +33,10 @@ connectDB();
 app.get("/", (req, res) => {
   res.send("Hello World!");
 });
-
+app.get("/posts", async (req, res) => {
+  const posts = await prisma.post.findMany();
+  res.json(posts);
+});
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

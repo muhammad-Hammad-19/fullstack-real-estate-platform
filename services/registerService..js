@@ -1,27 +1,33 @@
+import prisma from "../lib/prisma.js";
 import User from "../models/user.model.js";
 import bcrypt from "bcrypt";
 
 const registerService = async (name, email, password) => {
-  // 2. Check if email already exists
-  const isEmail = await User.findOne({ email });
+  
+  // 1. Check if email already exists
+  const isEmail = await prisma.user.findUnique({
+    where: { email },
+  });
+
   if (isEmail) {
     throw new Error("Email already exists");
   }
 
-  // 3. Hash password
+  // 2. Hash password
   const hashPassword = await bcrypt.hash(password, 10);
 
-  // 4. Create user
-
-  const user = await User.create({
-    name,
-    email,
-    password: hashPassword,
+  // 3. Create user
+  const user = await prisma.user.create({
+    data: {
+      name,
+      email,
+      password: hashPassword,
+    },
   });
 
-  // 5. Return user (without password)
+  // 4. Return user (without password)
   return {
-    id: user._id,
+    id: user.id,
     name: user.name,
     email: user.email,
   };
