@@ -29,11 +29,11 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { username, password } = req.body;
 
     // Validation
     const { error } = loginSchema.validate({
-      email,
+      username,
       password,
     });
 
@@ -44,7 +44,7 @@ export const login = async (req, res) => {
     }
 
     // Login Service
-    const result = await loginServices(email, password);
+    const result = await loginServices(username, password);
 
     if (!result.success) {
       return res.status(400).json({

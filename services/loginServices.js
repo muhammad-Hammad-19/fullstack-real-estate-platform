@@ -2,10 +2,10 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import prisma from "../lib/prisma.js";
 
-const loginServices = async (email, password) => {
+const loginServices = async (username, password) => {
   try {
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { username },
     });
 
     if (!user) {
