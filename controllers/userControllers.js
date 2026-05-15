@@ -1,5 +1,5 @@
 import prisma from "../lib/prisma.js";
-
+import bcrypt from "bcrypt";
 // GET ALL USERS
 export const getAllUsers = async (req, res) => {
   try {
@@ -27,7 +27,7 @@ export const getAllUsers = async (req, res) => {
 
 // GET SINGLE USER
 export const getUserById = async (req, res) => {
-  try { 
+  try {
     const { id } = req.params;
 
     const user = await prisma.user.findUnique({
@@ -54,23 +54,36 @@ export const getUserById = async (req, res) => {
     });
   }
 };
-
 // UPDATE USER
+
 export const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
 
+    const data = { ...req.body };
+
+  
+    // agar password aaya hai to usko hash karo
+
+    if (data.password && data.password.trim() !== "") {
+      const salt = await bcrypt.genSalt(10);
+      data.password = await bcrypt.hash(data.password, salt);
+    } else {
+      // password remove kar do taake DB me overwrite na ho
+      delete data.password;
+    }
+
     const updatedUser = await prisma.user.update({
       where: {
-        id,
+        id: id,
       },
-      data: req.body,
+      data: data,
     });
 
     res.status(200).json({
       success: true,
       message: "User updated successfully",
-      user: updatedUser,
+      user: userWithoutPassword,
     });
   } catch (err) {
     res.status(500).json({
@@ -79,7 +92,6 @@ export const updateUser = async (req, res) => {
     });
   }
 };
-
 // DELETE USER
 
 export const deleteUser = async (req, res) => {
@@ -96,7 +108,6 @@ export const deleteUser = async (req, res) => {
       success: true,
       message: "User deleted successfully",
     });
-    
   } catch (err) {
     res.status(500).json({
       success: false,

@@ -7,7 +7,7 @@ const loginServices = async (username, password) => {
     const user = await prisma.user.findUnique({
       where: { username },
     });
-
+    
     if (!user) {
       throw new Error("User not found");
     }
@@ -28,7 +28,7 @@ const loginServices = async (username, password) => {
         expiresIn: "7d",
       },
     );
-    
+
     return {
       success: true,
       message: "Login successfull",
