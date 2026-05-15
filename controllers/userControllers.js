@@ -62,14 +62,11 @@ export const updateUser = async (req, res) => {
 
     const data = { ...req.body };
 
-  
     // agar password aaya hai to usko hash karo
-
     if (data.password && data.password.trim() !== "") {
       const salt = await bcrypt.genSalt(10);
       data.password = await bcrypt.hash(data.password, salt);
     } else {
-      // password remove kar do taake DB me overwrite na ho
       delete data.password;
     }
 
@@ -77,13 +74,13 @@ export const updateUser = async (req, res) => {
       where: {
         id: id,
       },
-      data: data,
+      data,
     });
 
     res.status(200).json({
       success: true,
       message: "User updated successfully",
-      user: userWithoutPassword,
+      user: updatedUser,
     });
   } catch (err) {
     res.status(500).json({
