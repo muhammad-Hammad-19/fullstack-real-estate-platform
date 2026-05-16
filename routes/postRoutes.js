@@ -12,7 +12,7 @@ import authMiddleware from "../middlewares/authMiddleware.js";
 const router = express.Router();
 
 // GET ALL POSTS
-router.get("/", getPosts);
+router.get("/", authMiddleware, getPosts);
 
 // GET SINGLE POST
 router.get("/:id", authMiddleware, getUsersPosts);

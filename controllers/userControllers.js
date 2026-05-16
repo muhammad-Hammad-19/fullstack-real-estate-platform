@@ -115,7 +115,9 @@ export const savePost = async (req, res) => {
 };
 
 // GET ALL SAVED POSTS (FIXED)
+
 // Test karne ke liye getSavedPosts ko short-cut banayein:
+
 export const getSavedPosts = async (req, res) => {
   try {
     // Bina kisi filter (where) ke saara data mangwa kar dekhein

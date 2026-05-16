@@ -17,11 +17,8 @@ export const getPosts = async (req, res) => {
 export const getUsersPosts = async (req, res) => {
   try {
     // Middleware se logged-in user ki ID nikalenge
-    
     const userId = req.user?.id || req.user?.userId;
-
-    console.log(userId, "userID");
-
+    
     if (!userId) {
       return res
         .status(401)
