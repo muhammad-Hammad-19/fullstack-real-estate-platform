@@ -16,25 +16,25 @@ export const getPosts = async (req, res) => {
 // GET SINGLE POST
 export const getUsersPosts = async (req, res) => {
   try {
-    // Middleware se logged-in user ki ID nikalenge
-    const userId = req.user?.id || req.user?.userId;
+    // URL param (:id) se uthayenge, agar wo na ho toh logged-in user ki token ID use karenge
+    const userId = req.params.id || req.user?.id || req.user?.userId;
     
     if (!userId) {
       return res
         .status(401)
-        .json({ success: false, message: "Not Authenticated!" });
+        .json({ success: false, message: "User identity verify nahi ho saki!" });
     }
 
-    // Database se sirf is user ki saari posts find karenge
+    // Database se sirf IS user ki posts find karenge
     const posts = await prisma.post.findMany({
       where: {
-        userId: userId, // Sirf wahi posts aayengi jinki userId logged-in user se match karegi
+        userId: userId, 
       },
       include: {
-        postDetail: true, // Agar details chahiye toh
+        postDetail: true, 
       },
       orderBy: {
-        createdAt: "desc", // Newest posts pehle dikhane ke liye
+        createdAt: "desc", 
       },
     });
 
@@ -109,7 +109,59 @@ export const updatePost = async (req, res) => {
     });
   }
 };
+export const getPostDetails = async (req, res) => {
+  try {
+    const { id } = req.params;
 
+    if (!id) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Post ID is required!" });
+    }
+
+    // 1. Pehle simple query se post aur postDetail nikalen bina direct required relation crash ke
+    const post = await prisma.post.findUnique({
+      where: { id: id },
+      include: {
+        postDetail: true,
+        // Agar schema strict hai, toh relation yahan fetch karne par crash karega agar user null ho
+      },
+    });
+
+    if (!post) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Post nahi mili!" });
+    }
+
+    // 2. Ab safely user ki details fetch karenge agar post ke paas userId maujood hai
+    let userData = null;
+    if (post.userId) {
+      userData = await prisma.user.findUnique({
+        where: { id: post.userId },
+        select: {
+          username: true,
+          avatar: true,
+        },
+      });
+    }
+
+    // 3. Dono data ko combine karke frontend ko bhejenge
+    res.status(200).json({
+      success: true,
+      data: {
+        ...post,
+        user: userData || { username: "Unknown User", avatar: "" }, // Fallback safe object
+      },
+    });
+  } catch (error) {
+    console.error("Get Post Details Error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
 // DELETE POST
 export const deletePost = async (req, res) => {
   const id = req.params.id;

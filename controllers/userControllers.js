@@ -120,16 +120,41 @@ export const savePost = async (req, res) => {
 
 export const getSavedPosts = async (req, res) => {
   try {
-    // Bina kisi filter (where) ke saara data mangwa kar dekhein
-    
-    const savedEntries = await prisma.savedPost.findMany({
-      include: {
-        post: true,
-      },
-    });
+    // Token middleware se safe identity verify karenge
+    const userId = req.user?.id || req.user?.userId;
 
-    return res.status(200).json({ success: true, data: savedEntries });
+    if (!userId) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Not Authenticated! Login laazmi hai." });
+    }
+
+    // 🟢 FIX: 'where' filter lagaya taake sirf logged-in user ka saved data aaye
+    const savedEntries = await prisma.savedPost.findMany({
+      where: {
+        userId: userId, // Sirf is login user ki saved items filter honge
+      },
+      include: {
+        post: {
+          include: {
+            postDetail: true, // Saved post ke andar ka main specification data mapping flat object format me milega
+          }
+        },
+      },
+      orderBy: {
+        createdAt: "desc"
+      }
+    });
+    
+    return res.status(200).json({ 
+      success: true, 
+      data: savedEntries 
+    });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    console.error("Get Saved Posts Error:", error);
+    return res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
   }
 };
