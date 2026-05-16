@@ -1,0 +1,172 @@
+import prisma from "../lib/prisma.js";
+
+// 🟢 1. GET ALL CHATS (INBOX LIST)
+export const getChats = async (req, res) => {
+  const tokenUserId = req.user.userId;
+
+  if (!tokenUserId) {
+    return res.status(401).json({ message: "Not Authenticated!" });
+  }
+
+  try {
+    const chats = await prisma.chat.findMany({
+      where: {
+        userIDs: {
+          hasSome: [tokenUserId],
+        },
+      },
+    });
+
+    // Loop ko optimized tarike se chalane ke liye Promise.all use karein taake crash na ho
+    const detailedChats = await Promise.all(
+      chats.map(async (chat) => {
+        const receiverId = chat.userIDs.find((id) => id !== tokenUserId);
+
+        let receiver = null;
+        if (receiverId) {
+          receiver = await prisma.user.findUnique({
+            where: { id: receiverId },
+            select: {
+              id: true,
+              username: true,
+              avatar: true,
+            },
+          });
+        }
+
+        return { ...chat, receiver };
+      }),
+    );
+
+    res.status(200).json(detailedChats);
+  } catch (err) {
+    console.error("Error in getChats:", err);
+    res.status(500).json({ message: "Failed to get chats!" });
+  }
+};
+
+// 🟢 2. GET SINGLE CHAT (CHAT ROOM DISPLAY)
+
+export const getChat = async (req, res) => {
+  const tokenUserId = req.user.userId;
+  const chatId = req.params.id;
+  console.log(chatId, "chatId");
+  console.log("token id ", tokenUserId);
+  try {
+    const chat = await prisma.chat.findFirst({
+      where: {
+        id: chatId,
+        userIDs: {
+          hasSome: [tokenUserId],
+        },
+      },
+      include: {
+        messages: {
+          orderBy: {
+            createdAt: "asc",
+          },
+        },  
+      },
+    });
+
+    if (!chat) {
+      // 404 dene ke bajaye clean empty state return karein taake frontend smoothly handles kare
+      return res.status(200).json({
+        id: chatId,
+        messages: [],
+        seenBy: [tokenUserId],
+        receiver: null, // Ya agar receiver fetch kar sakte hain toh wo pass karein
+        isEmptyPlaceholder: true,
+      });
+    }
+
+    // Checking if already seen, else update cleanly
+    if (!chat.seenBy.includes(tokenUserId)) {
+      await prisma.chat.update({
+        where: { id: chatId },
+        data: {
+          seenBy: {
+            set: [...chat.seenBy, tokenUserId],
+          },
+        },
+      });
+    }
+
+    res.status(200).json(chat);
+  } catch (err) {
+    console.error("Error in getChat:", err);
+    res.status(500).json({ message: "Failed to get chat!" });
+  }
+};
+
+// 🟢 3. ADD CHAT (SINGLE PAGE PAR JAB CLICK HO)
+export const addChat = async (req, res) => {
+  // Safe check: Ensure user exists on request object
+  const tokenUserId = req.user?.userId || req.userId;
+
+  console.log(tokenUserId, "user id");
+
+  const { receiverId } = req.body;
+
+  if (!receiverId) {
+    return res.status(400).json({ message: "Receiver ID is required!" });
+  }
+
+  // Self-chat protection check
+  if (tokenUserId === receiverId) {
+    return res
+      .status(400)
+      .json({ message: "Aap apne aap se chat shuru nahi kar sakte!" });
+  }
+
+  try {
+    const existingChat = await prisma.chat.findFirst({
+      where: {
+        userIDs: {
+          hasEvery: [tokenUserId, receiverId],
+        },
+      },
+    });
+
+    // Agar pehle se chat room bana hua hai, toh naya banane ki bajaye wahi return karo
+    if (existingChat) {
+      return res.status(200).json(existingChat);
+    }
+
+    // 🟢 FIXED: Removed 'seenBy' because it's missing in your Prisma Schema
+    const newChat = await prisma.chat.create({
+      data: {
+        userIDs: [tokenUserId, receiverId],
+      },
+    });
+
+    res.status(200).json(newChat);
+  } catch (err) {
+    console.error("Error in addChat:", err);
+    res.status(500).json({ message: "Failed to add chat!" });
+  }
+};
+// 🟢 4. READ CHAT MARKER
+export const readChat = async (req, res) => {
+  const tokenUserId = req.user.userId;
+
+  try {
+    const chat = await prisma.chat.update({
+      where: {
+        id: req.params.id,
+        userIDs: {
+          hasSome: [tokenUserId],
+        },
+      },
+      data: {
+        seenBy: {
+          set: [tokenUserId],
+        },
+      },
+    });
+    res.status(200).json(chat);
+  } catch (err) {
+    console.error("Error in readChat:", err);
+    res.status(500).json({ message: "Failed to read chat!" });
+  }
+};

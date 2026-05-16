@@ -10,6 +10,7 @@ import { initSocket } from "./socket/socket.js"; // 👈 Aapki naye socket file 
 import authRoute from "./routes/authRoutes.js";
 import userRoute from "./routes/userRoutes.js";
 import postRoute from "./routes/postRoutes.js";
+import chatRoute from "./routes/chatRoutes.js";
 
 dotenv.config();
 
@@ -33,6 +34,7 @@ app.use(express.json());
 
 // Routes
 app.use("/api/auth", authRoute);
+app.use("/api/chats", chatRoute);
 app.use("/api/posts", postRoute);
 app.use("/api/users", userRoute);
 

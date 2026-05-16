@@ -24,9 +24,9 @@ export const initSocket = (server) => {
     socket.on("chat-message", (data) => {
       const { to } = data;
       const targetSocketId = users[to];
-
-      // Receiver ko message bhejo (agar online hai)
       
+      // Receiver ko message bhejo (agar online hai)
+
       if (targetSocketId) {
         io.to(targetSocketId).emit("chat-message", data);
       }
