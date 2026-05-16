@@ -5,19 +5,21 @@ import {
   getUserById,
   updateUser,
   savePost,
-  getSavedPosts
+  getSavedPosts,
 } from "../controllers/userControllers.js";
 import authMiddleware from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
+// 1. Static aur Specific Actions (Hamesha Upar) 🔝
 router.get("/", authMiddleware, getAllUsers);
+router.post("/save", authMiddleware, savePost);
+router.get("/savedPosts", authMiddleware, getSavedPosts); // 🔥 Ab yeh sahi hit hoga!
+
+// 2. Dynamic ID waale routes (Hamesha Sabse Neeche) ⬇️
+
 router.get("/:id", authMiddleware, getUserById);
-router.put("/:id", authMiddleware, updateUser);``
+router.put("/:id", authMiddleware, updateUser);
 router.delete("/:id", authMiddleware, deleteUser);
-
-router.post("/save", savePost); 
-
-router.get("/saved", getSavedPosts);
 
 export default router;

@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 
 const protectMiddleware = (req, res) => {
   const token = req?.cookies?.token;
-  console.log(token);
+  // console.log(token);
 
   if (!token) {
     return res.status(401).json({ message: "Authorization token missing" });

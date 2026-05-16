@@ -2,10 +2,9 @@ import prisma from "../lib/prisma.js";
 
 // GET ALL POSTS
 export const getPosts = async (req, res) => {
-
   try {
     const posts = await prisma.post.findMany();
-    
+
     res.status(200).json(posts);
   } catch (error) {
     res.status(500).json({
@@ -15,23 +14,41 @@ export const getPosts = async (req, res) => {
 };
 
 // GET SINGLE POST
-export const getPost = async (req, res) => {
+export const getUsersPosts = async (req, res) => {
   try {
-    const post = await prisma.post.findUnique({
+    // Middleware se logged-in user ki ID nikalenge
+    
+    const userId = req.user?.id || req.user?.userId;
+
+    console.log(userId, "userID");
+
+    if (!userId) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Not Authenticated!" });
+    }
+
+    // Database se sirf is user ki saari posts find karenge
+    const posts = await prisma.post.findMany({
       where: {
-        id: req.params.id,
+        userId: userId, // Sirf wahi posts aayengi jinki userId logged-in user se match karegi
+      },
+      include: {
+        postDetail: true, // Agar details chahiye toh
+      },
+      orderBy: {
+        createdAt: "desc", // Newest posts pehle dikhane ke liye
       },
     });
 
-    if (!post) {
-      return res.status(404).json({
-        message: "Post not found",
-      });
-    }
-
-    res.status(200).json(post);
+    res.status(200).json({
+      success: true,
+      data: posts,
+    });
   } catch (error) {
+    console.error("Get User Posts Error:", error);
     res.status(500).json({
+      success: false,
       message: error.message,
     });
   }
@@ -98,7 +115,6 @@ export const updatePost = async (req, res) => {
 
 // DELETE POST
 export const deletePost = async (req, res) => {
-
   const id = req.params.id;
   try {
     await prisma.$transaction([
@@ -109,7 +125,6 @@ export const deletePost = async (req, res) => {
     res.status(200).json({
       message: "Post deleted successfully",
     });
-
   } catch (error) {
     res.status(500).json({
       message: error.code === "P2025" ? "Post not found" : error.message,

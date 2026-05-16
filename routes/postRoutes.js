@@ -2,7 +2,7 @@ import express from "express";
 
 import {
   getPosts,
-  getPost,
+  getUsersPosts,
   addPost,
   updatePost,
   deletePost,
@@ -15,7 +15,7 @@ const router = express.Router();
 router.get("/", getPosts);
 
 // GET SINGLE POST
-router.get("/:id", getPost);
+router.get("/:id", authMiddleware, getUsersPosts);
 
 // ADD NEW POST
 router.post("/", authMiddleware, addPost);

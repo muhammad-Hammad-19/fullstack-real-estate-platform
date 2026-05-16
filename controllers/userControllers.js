@@ -1,27 +1,16 @@
 import prisma from "../lib/prisma.js";
 import bcrypt from "bcrypt";
+
 // GET ALL USERS
 export const getAllUsers = async (req, res) => {
   try {
     const loggedInUserId = req.user.email;
-
     const users = await prisma.user.findMany({
-      where: {
-        email: {
-          not: loggedInUserId,
-        },
-      },
+      where: { email: { not: loggedInUserId } },
     });
-
-    res.status(200).json({
-      success: true,
-      users,
-    });
+    res.status(200).json({ success: true, users });
   } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
@@ -29,40 +18,25 @@ export const getAllUsers = async (req, res) => {
 export const getUserById = async (req, res) => {
   try {
     const { id } = req.params;
-
-    const user = await prisma.user.findUnique({
-      where: {
-        id,
-      },
-    });
+    const user = await prisma.user.findUnique({ where: { id } });
 
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
-
-    res.status(200).json({
-      success: true,
-      user,
-    });
+    res.status(200).json({ success: true, user });
   } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
-// UPDATE USER
 
+// UPDATE USER
 export const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-
     const data = { ...req.body };
 
-    // agar password aaya hai to usko hash karo
     if (data.password && data.password.trim() !== "") {
       const salt = await bcrypt.genSalt(10);
       data.password = await bcrypt.hash(data.password, salt);
@@ -71,9 +45,7 @@ export const updateUser = async (req, res) => {
     }
 
     const updatedUser = await prisma.user.update({
-      where: {
-        id: id,
-      },
+      where: { id: id },
       data,
     });
 
@@ -89,22 +61,15 @@ export const updateUser = async (req, res) => {
     });
   }
 };
-// DELETE USER
 
+// DELETE USER
 export const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
-
-    await prisma.user.delete({
-      where: {
-        id,
-      },
-    });
-
-    res.status(200).json({
-      success: true,
-      message: "User deleted successfully",
-    });
+    await prisma.user.delete({ where: { id } });
+    res
+      .status(200)
+      .json({ success: true, message: "User deleted successfully" });
   } catch (err) {
     res.status(500).json({
       success: false,
@@ -113,52 +78,56 @@ export const deleteUser = async (req, res) => {
   }
 };
 
+// SAVE POST (TOGGLE LOGIC KE SATH)
 export const savePost = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.userId || req.user.id;
     const { postId } = req.body;
 
+    // Behtar tareeqa: Pehle check karo agar already saved hai toh unsave karlo
+    const existingSave = await prisma.savedPost.findFirst({
+      where: { userId, postId },
+    });
+
+    if (existingSave) {
+      await prisma.savedPost.delete({ where: { id: existingSave.id } });
+      return res.status(200).json({
+        success: true,
+        message: "Post removed from saved list",
+        isSaved: false,
+      });
+    }
+
     const saved = await prisma.savedPost.create({
-      data: {
-        userId,
-        postId,
-      },
+      data: { userId, postId },
+      include: { post: true },
     });
 
     res.status(201).json({
       success: true,
       message: "Post saved",
+      isSaved: true,
       data: saved,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
+// GET ALL SAVED POSTS (FIXED)
+// Test karne ke liye getSavedPosts ko short-cut banayein:
 export const getSavedPosts = async (req, res) => {
   try {
-    const userId = req.user.id;
-
-    const savedPosts = await prisma.savedPost.findMany({
-      where: {
-        userId,
-      },
+    // Bina kisi filter (where) ke saara data mangwa kar dekhein
+    
+    const savedEntries = await prisma.savedPost.findMany({
       include: {
         post: true,
       },
     });
 
-    res.status(200).json({
-      success: true,
-      data: savedPosts,
-    });
+    return res.status(200).json({ success: true, data: savedEntries });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
