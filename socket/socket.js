@@ -16,14 +16,20 @@ export const initSocket = (server) => {
 
     // ✅ 1. Register User (Online Status)
     socket.on("register", (userId) => {
+      console.log("userid register ki bahi", userId);
+
       users[userId] = socket.id;
+
       io.emit("register", users); // Sabko updated online list bhejo
     });
 
     // ✅ 2. One-to-One Chat Message
     socket.on("chat-message", (data) => {
-      const { to } = data;
-      const targetSocketId = users[to];
+      console.log(data, "user ka data chats hai backend se ====");
+
+      const { receiverId } = data;
+
+      const targetSocketId = users[receiverId];
 
       // Receiver ko message bhejo (agar online hai)
 
@@ -33,7 +39,6 @@ export const initSocket = (server) => {
 
       // Sender ko wapis confirmation bhejo
       socket.emit("chat-message", data);
-      
     });
 
     // ✅ 3. User Disconnect

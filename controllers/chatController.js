@@ -144,24 +144,35 @@ export const addChat = async (req, res) => {
     const newChat = await prisma.chat.create({
       data: {
         userIDs: [tokenUserId, receiverId],
+        seenBy: [tokenUserId], // Jisne chat shuru ki, usne to dekh li (Notification issue nahi aayega)
+        users: {
+          connect: [{ id: tokenUserId }, { id: receiverId }],
+        },
       },
       include: {
         users: {
           where: {
             id: {
-              not: tokenUserId, // Nayi chat mein bhi sirf receiver ka data response mein jayega
+              not: tokenUserId, // Response mein sirf receiver ka data jayega
             },
           },
         },
       },
     });
 
-    res.status(200).json(newChat);
+    // Front-end ki aasani ke liye data structure uniform rakhein
+    // Agar users array mein data hai to direct receiver property bana kar bhej sakte hain
+    const chatResponse = {
+      ...newChat,
+      receiver: newChat.users[0] || null,
+    };
+
+    return res.status(200).json(chatResponse);
   } catch (err) {
     console.error("Error in addChat:", err);
     res.status(500).json({ message: "Failed to add chat!" });
   }
-}
+};
 // 🟢 4. READ CHAT MARKER
 export const readChat = async (req, res) => {
   const tokenUserId = req.user.userId;
