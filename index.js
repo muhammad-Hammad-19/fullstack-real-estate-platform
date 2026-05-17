@@ -11,6 +11,7 @@ import authRoute from "./routes/authRoutes.js";
 import userRoute from "./routes/userRoutes.js";
 import postRoute from "./routes/postRoutes.js";
 import chatRoute from "./routes/chatRoutes.js";
+import messagesRoute from "./routes/messageRoutes.js";
 
 dotenv.config();
 
@@ -37,6 +38,7 @@ app.use("/api/auth", authRoute);
 app.use("/api/chats", chatRoute);
 app.use("/api/posts", postRoute);
 app.use("/api/users", userRoute);
+app.use("/api/messages", messagesRoute);
 
 // Database Connection
 connectDB();

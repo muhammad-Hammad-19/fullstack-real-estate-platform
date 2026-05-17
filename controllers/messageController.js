@@ -1,7 +1,7 @@
 import prisma from "../lib/prisma.js";
 
 export const addMessage = async (req, res) => {
-  const tokenUserId = req.userId;
+  const tokenUserId = req.user.userId;
   const chatId = req.params.chatId;
   const text = req.body.text;
 
@@ -37,7 +37,8 @@ export const addMessage = async (req, res) => {
 
     res.status(200).json(message);
   } catch (err) {
-    console.log(err);
-    res.status(500).json({ message: "Failed to add message!" });
+    console.log(err.message);
+
+    res.status(500).json({ message: err.message + "Failed to add message!" });
   }
 };

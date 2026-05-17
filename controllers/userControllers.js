@@ -32,29 +32,42 @@ export const getUserById = async (req, res) => {
 };
 
 // UPDATE USER
+
 export const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
     const data = { ...req.body };
 
+    // 1. Password hashing logic
     if (data.password && data.password.trim() !== "") {
       const salt = await bcrypt.genSalt(10);
       data.password = await bcrypt.hash(data.password, salt);
     } else {
-      delete data.password;
+      delete data.password; // Agar khali hai to update object se nikal do
     }
 
+    // 2. Prisma Update with Explicit Selection
     const updatedUser = await prisma.user.update({
       where: { id: id },
       data,
+      // 🔒 SQL injection ya sensitive fields leak hone se bachane ke liye selection criteria
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        avatar: true,
+        createdAt: true,
+      },
     });
 
+    // 3. Clean Success Response
     res.status(200).json({
       success: true,
       message: "User updated successfully",
       user: updatedUser,
     });
   } catch (err) {
+    console.error("Update User Error:", err);
     res.status(500).json({
       success: false,
       message: err.code === "P2025" ? "User not found" : err.message,
@@ -124,9 +137,10 @@ export const getSavedPosts = async (req, res) => {
     const userId = req.user?.id || req.user?.userId;
 
     if (!userId) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Not Authenticated! Login laazmi hai." });
+      return res.status(401).json({
+        success: false,
+        message: "Not Authenticated! Login laazmi hai.",
+      });
     }
 
     // 🟢 FIX: 'where' filter lagaya taake sirf logged-in user ka saved data aaye
@@ -138,23 +152,23 @@ export const getSavedPosts = async (req, res) => {
         post: {
           include: {
             postDetail: true, // Saved post ke andar ka main specification data mapping flat object format me milega
-          }
+          },
         },
       },
       orderBy: {
-        createdAt: "desc"
-      }
+        createdAt: "desc",
+      },
     });
-    
-    return res.status(200).json({ 
-      success: true, 
-      data: savedEntries 
+
+    return res.status(200).json({
+      success: true,
+      data: savedEntries,
     });
   } catch (error) {
     console.error("Get Saved Posts Error:", error);
-    return res.status(500).json({ 
-      success: false, 
-      message: error.message 
+    return res.status(500).json({
+      success: false,
+      message: error.message,
     });
   }
 };

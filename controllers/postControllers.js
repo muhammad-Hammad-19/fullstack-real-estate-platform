@@ -1,40 +1,99 @@
 import prisma from "../lib/prisma.js";
-
-// GET ALL POSTS
 export const getPosts = async (req, res) => {
   try {
-    const posts = await prisma.post.findMany();
+    const { city, type, property, minPrice, maxPrice, bedroom } = req.query;
+    console.log(req.query, "query data hai");
 
-    res.status(200).json(posts);
-  } catch (error) {
+    const queryConditions = {};
+
+    // 1. City Filter: Agar database mein "London" hai aur user "london" likhe to issue na ho (Optional: If database supports mode)
+    if (city && city.trim() !== "") {
+      queryConditions.city = city;
+    }
+
+    // 2. Type Filter: Agar aapke db mein values lowercase hain to .toLowerCase() sahi hai, warna .toUpperCase() karein
+    if (type && type.trim() !== "") {
+      queryConditions.type = type.toLowerCase(); // Agar DB mein "BUY" hai to isay .toUpperCase() kar dein
+    }
+
+    // 3. Property Filter: DB values ke sath format matching zaroori hai
+    if (property && property.trim() !== "") {
+      queryConditions.property = property.toLowerCase(); // Agar DB mein capital hai to .toUpperCase() kar dein
+    }
+
+    // 4. Bedroom Filter: Type matching handle check
+    if (bedroom && bedroom.trim() !== "") {
+      const parsedBedroom = parseInt(bedroom);
+      if (!isNaN(parsedBedroom)) {
+        queryConditions.bedroom = parsedBedroom;
+      }
+    }
+
+    // 5. Price Ranges Bounds Debugging Check
+    const parsedMin =
+      minPrice && minPrice.trim() !== "" && !isNaN(minPrice)
+        ? parseInt(minPrice)
+        : 0;
+    const parsedMax =
+      maxPrice && maxPrice.trim() !== "" && !isNaN(maxPrice)
+        ? parseInt(maxPrice)
+        : 99999999;
+
+    queryConditions.price = {
+      gte: parsedMin,
+      lte: parsedMax,
+    };
+
+    // DEBUGGING: Console mein check karein ke database ke paas kya query jaa rahi hai
+    console.log(
+      "Prisma Search Conditions:",
+      JSON.stringify(queryConditions, null, 2),
+    );
+
+    const posts = await prisma.post.findMany({
+      where: queryConditions,
+      include: {
+        postDetail: true,
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      count: posts.length, // Pata chal sake ke kitne items mile
+      data: posts,
+    });
+  } catch (err) {
+    console.error("Database Filter Error:", err);
     res.status(500).json({
-      message: error.message,
+      success: false,
+      message:
+        err.message || "Server error occurred while fetching properties.",
     });
   }
 };
-
 // GET SINGLE POST
 export const getUsersPosts = async (req, res) => {
   try {
     // URL param (:id) se uthayenge, agar wo na ho toh logged-in user ki token ID use karenge
     const userId = req.params.id || req.user?.id || req.user?.userId;
-    
+
     if (!userId) {
-      return res
-        .status(401)
-        .json({ success: false, message: "User identity verify nahi ho saki!" });
+      return res.status(401).json({
+        success: false,
+        message: "User identity verify nahi ho saki!",
+      });
     }
 
     // Database se sirf IS user ki posts find karenge
     const posts = await prisma.post.findMany({
       where: {
-        userId: userId, 
+        userId: userId,
       },
       include: {
-        postDetail: true, 
+        postDetail: true,
       },
       orderBy: {
-        createdAt: "desc", 
+        createdAt: "desc",
       },
     });
 
@@ -55,7 +114,7 @@ export const getUsersPosts = async (req, res) => {
 export const addPost = async (req, res) => {
   try {
     const userId = req.user.userId;
-
+    
     const { postData, postDetail } = req.body;
 
     const post = await prisma.post.create({

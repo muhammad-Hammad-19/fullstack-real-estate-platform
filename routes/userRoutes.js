@@ -13,6 +13,7 @@ const router = express.Router();
 
 // 1. Static aur Specific Actions (Hamesha Upar) 🔝
 router.get("/", authMiddleware, getAllUsers);
+
 router.post("/save", authMiddleware, savePost);
 router.get("/savedPosts", authMiddleware, getSavedPosts); // 🔥 Ab yeh sahi hit hoga!
 

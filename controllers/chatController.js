@@ -65,7 +65,7 @@ export const getChat = async (req, res) => {
           orderBy: {
             createdAt: "asc",
           },
-        },  
+        },
       },
     });
 
@@ -103,9 +103,6 @@ export const getChat = async (req, res) => {
 export const addChat = async (req, res) => {
   // Safe check: Ensure user exists on request object
   const tokenUserId = req.user?.userId || req.userId;
-
-  console.log(tokenUserId, "user id");
-
   const { receiverId } = req.body;
 
   if (!receiverId) {
@@ -120,23 +117,42 @@ export const addChat = async (req, res) => {
   }
 
   try {
+    // 1. Check karo agar chat pehle se exist karti hai
     const existingChat = await prisma.chat.findFirst({
       where: {
         userIDs: {
           hasEvery: [tokenUserId, receiverId],
         },
       },
+      include: {
+        users: {
+          where: {
+            id: {
+              not: tokenUserId, // Sirf receiver ka data include hoga
+            },
+          },
+        },
+      },
     });
 
-    // Agar pehle se chat room bana hua hai, toh naya banane ki bajaye wahi return karo
+    // Agar chat mil gayi, toh response bhej do
     if (existingChat) {
       return res.status(200).json(existingChat);
     }
 
-    // 🟢 FIXED: Removed 'seenBy' because it's missing in your Prisma Schema
+    // 2. Agar chat nahi milti, toh Nayi Chat create karo aur sath hi Receiver ka data include karo
     const newChat = await prisma.chat.create({
       data: {
         userIDs: [tokenUserId, receiverId],
+      },
+      include: {
+        users: {
+          where: {
+            id: {
+              not: tokenUserId, // Nayi chat mein bhi sirf receiver ka data response mein jayega
+            },
+          },
+        },
       },
     });
 
@@ -145,7 +161,7 @@ export const addChat = async (req, res) => {
     console.error("Error in addChat:", err);
     res.status(500).json({ message: "Failed to add chat!" });
   }
-};
+}
 // 🟢 4. READ CHAT MARKER
 export const readChat = async (req, res) => {
   const tokenUserId = req.user.userId;
