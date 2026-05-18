@@ -1,60 +1,88 @@
 import { Server } from "socket.io";
 
-// Online users track karne ke liye
-const users = {}; // { userId: socket.id }
+// We now use an array of socket IDs for each userId to support multi-tabs smoothly
+const users = {}; 
+let ioInstance = null;
 
 export const initSocket = (server) => {
-  const io = new Server(server, {
+  ioInstance = new Server(server, {
     cors: {
-      origin: process?.env?.CLIENT_URL || "http://localhost:5173", // Fallback back laga diya safe side ke liye
+      origin: "http://localhost:5173", // Frontend Client URL
+      methods: ["GET", "POST", "PUT"],
       credentials: true,
     },
+    transports: ["websocket", "polling"]
   });
 
-  io.on("connection", (socket) => {
-    console.log("User connected:", socket.id);
+  ioInstance.on("connection", (socket) => {
+    console.log("⚡ New Tab Connected. Socket ID:", socket.id);
 
-    // ✅ 1. Register User (Online Status)
+    // Identity Mapper Listener (Supports Multi-tab sessions)
     socket.on("register", (userId) => {
-      console.log("userid register ki bahi", userId);
+      if (userId) {
+        const uIdStr = String(userId);
+        
+        // Agar user pehle se register nahi hai to khali array banayein
+        if (!users[uIdStr]) {
+          users[uIdStr] = [];
+        }
+        
+        // Socket ID duplicate hone se bachaen aur array mein push karein
+        if (!users[uIdStr].includes(socket.id)) {
+          users[uIdStr].push(socket.id);
+        }
 
-      users[userId] = socket.id;
-
-      io.emit("register", users); // Sabko updated online list bhejo
-    });
-
-    // ✅ 2. One-to-One Chat Message
-    socket.on("chat-message", (data) => {
-      console.log(data, "user ka data chats hai backend se ====");
-
-      const { receiverId } = data;
-
-      const targetSocketId = users[receiverId];
-
-      // Receiver ko message bhejo (agar online hai)
-
-      if (targetSocketId) {
-        io.to(targetSocketId).emit("chat-message", data);
+        console.log(`✅ User Mapped -> [User: ${userId}] linked connections:`, users[uIdStr]);
+        
+        // Active users list broadcast (All active unique keys)
+        ioInstance.emit("onlineUsers", Object.keys(users));
       }
-
-      // Sender ko wapis confirmation bhejo
-      socket.emit("chat-message", data);
     });
 
-    // ✅ 3. User Disconnect
+    // 🛠️ FIXED Client-to-Client Relay System (Loops through all active user socket instances)
+    socket.on("sendMessage", ({ receiverId, data }) => {
+      const targetSocketIds = users[String(receiverId)];
+      
+      // Checking if the target user array contains any active socket pipes
+      if (targetSocketIds && targetSocketIds.length > 0) {
+        console.log(`📩 Relaying client event to all active nodes (${targetSocketIds.length}) for user: ${receiverId}`);
+        
+        // Loop karke user ke har active tab ko message deliver karein taake instantaneous response mile
+        targetSocketIds.forEach((socketId) => {
+          ioInstance.to(socketId).emit("getMessage", data);
+        });
+      } else {
+        console.log(`⚠️ User ${receiverId} is offline. Message buffered in DB.`);
+      }
+    });
+
+    // Clean Session references properly upon closure
     socket.on("disconnect", () => {
-      for (let userId in users) {
-        if (users[userId] === socket.id) {
-          delete users[userId];
-          io.emit("register", users); // Baki sabko batao ke user offline ho gaya
+      console.log("❌ Tab Closed/Disconnected:", socket.id);
+      
+      for (const userId in users) {
+        // Find if this socket belongs to the current user's array
+        if (users[userId].includes(socket.id)) {
+          // Remove only this specific closed socket ID from the array
+          users[userId] = users[userId].filter((id) => id !== socket.id);
+          console.log(`🗑️ Connection cleaned. Remaining nodes for user ${userId}:`, users[userId]);
+
+          // Agar user ke saare tabs ya connections band ho chuke hain, toh user ko object se delete karein
+          if (users[userId].length === 0) {
+            delete users[userId];
+            console.log(`🚫 User ${userId} is now completely offline.`);
+          }
+          
+          // Re-broadcast fresh updated online track map
+          ioInstance.emit("onlineUsers", Object.keys(users));
           break;
         }
       }
-      console.log("User disconnected:", socket.id);
     });
   });
 
-  return io;
+  return ioInstance;
 };
 
+export const getIO = () => ioInstance;
 export { users };

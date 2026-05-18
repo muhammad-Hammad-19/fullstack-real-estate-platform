@@ -174,26 +174,29 @@ export const addChat = async (req, res) => {
   }
 };
 // 🟢 4. READ CHAT MARKER
+// 🟢 4. READ CHAT MARKER (chatController.js)
 export const readChat = async (req, res) => {
   const tokenUserId = req.user.userId;
+  const chatId = req.params.id; // URL se ID nikali
 
   try {
     const chat = await prisma.chat.update({
       where: {
-        id: req.params.id,
+        id: chatId,
         userIDs: {
           hasSome: [tokenUserId],
         },
       },
       data: {
         seenBy: {
-          set: [tokenUserId],
+          set: [tokenUserId], // Ya agar safe rehna hai to pehle fetch karke append karein, par 'set: [tokenUserId]' current user ke liye notification clear kar dega
         },
       },
     });
-    res.status(200).json(chat);
+
+    return res.status(200).json(chat);
   } catch (err) {
     console.error("Error in readChat:", err);
-    res.status(500).json({ message: "Failed to read chat!" });
+    return res.status(500).json({ message: "Failed to read chat!" });
   }
 };

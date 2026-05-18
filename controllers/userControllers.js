@@ -175,7 +175,6 @@ export const getSavedPosts = async (req, res) => {
 
 export const getNotificationNumber = async (req, res) => {
   // 2. Safe userId check (middleware ensure karein)
-console.log(req);
 
   const tokenUserId = req.user?.id || req.user?.userId || req.userId;
 

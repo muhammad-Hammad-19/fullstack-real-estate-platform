@@ -2,10 +2,10 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import { createServer } from "node:http"; // 👈 Socket ke liye zaroori hai
+import { createServer } from "node:http"; 
 
 import { connectDB } from "./db/db.js";
-import { initSocket } from "./socket/socket.js"; // 👈 Aapki naye socket file ka import
+import { initSocket } from "./socket/socket.js"; 
 
 import authRoute from "./routes/authRoutes.js";
 import userRoute from "./routes/userRoutes.js";
@@ -16,14 +16,11 @@ import messagesRoute from "./routes/messageRoutes.js";
 dotenv.config();
 
 const app = express();
-const server = createServer(app); // 👈 Express app ko HTTP server mein wrap kiya
+const server = createServer(app); 
+const PORT = process.env.PORT || 3000;
 
-const PORT = process.env.PORT || 5000;
+// 1. Middlewares (Hamesha pehle load karein)
 
-// Initialize Socket.io (HTTP Server pass kiya)
-initSocket(server);
-
-// Middleware
 app.use(cookieParser());
 app.use(
   cors({
@@ -31,9 +28,13 @@ app.use(
     credentials: true,
   }),
 );
+
 app.use(express.json());
 
-// Routes
+// 2. Initialize Socket.io (Middlewares ke baad safe rehta hai)
+initSocket(server);
+
+// 3. Routes
 app.use("/api/auth", authRoute);
 app.use("/api/chats", chatRoute);
 app.use("/api/posts", postRoute);
@@ -48,12 +49,17 @@ app.get("/", (req, res) => {
   res.send("Hello World! API with Socket is running 🚀");
 });
 
+// ⚠️ Note: Ensure 'prisma' is imported if you are debugging this route directly here
 app.get("/posts", async (req, res) => {
-  const posts = await prisma.post.findMany(); // Make sure prisma properly imported/initialized hai project mein
-  res.json(posts);
+  try {
+    const posts = await prisma.post.findMany(); 
+    res.json(posts);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// ⚠️ CRITICAL CHANGE: 'app.listen' ki jagah 'server.listen' use hoga
+// Listen using HTTP server instance
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`🚀 Single instance server running on port ${PORT}`);
 });
