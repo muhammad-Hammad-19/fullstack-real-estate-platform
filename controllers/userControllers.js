@@ -174,40 +174,23 @@ export const getSavedPosts = async (req, res) => {
 };
 
 export const getNotificationNumber = async (req, res) => {
-  // 2. Safe userId check (middleware ensure karein)
-
-  const tokenUserId = req.user?.id || req.user?.userId || req.userId;
-
-
-  if (!tokenUserId) {
-    console.log("❌ Notification Error: User authenticated nahi hai ya token missing hai.");
-    return res.status(401).json({ message: "Not Authenticated!" });
-  }
-
+  const tokenUserId = req.user.userId || req.user.id;
   try {
-    // 3. Simple Count Query (Pehle is simple query se check karein agar database sahi respond kar raha hai)
-    const unreadChatsCount = await prisma.chat.count({
+    const number = await prisma.chat.count({
       where: {
         userIDs: {
           hasSome: [tokenUserId],
         },
-        // Agar schema mein 'seenBy' nahi hai, to pehle is nested NOT block ko comment out karke test karein
         NOT: {
           seenBy: {
-            has: tokenUserId,
+            hasSome: [tokenUserId],
           },
         },
       },
     });
-
-    console.log("🟢 Unread Count Success:", unreadChatsCount);
-    return res.status(200).json(unreadChatsCount);
-
+    res.status(200).json(number);
   } catch (err) {
-    // Yeh console log aapko express terminal par asli wajah batayega
-    console.log("❌ CRITICAL ERROR IN GET_NOTIFICATION_NUMBER:");
-    console.error(err); 
-
-    return res.status(500).json({ message: "Internal Server Error in Notification logic" });
+    console.log(err);
+    res.status(500).json({ message: "Failed to get profile posts!" });
   }
 };

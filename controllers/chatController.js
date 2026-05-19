@@ -173,30 +173,38 @@ export const addChat = async (req, res) => {
     res.status(500).json({ message: "Failed to add chat!" });
   }
 };
-// 🟢 4. READ CHAT MARKER
-// 🟢 4. READ CHAT MARKER (chatController.js)
+
+// Backend par jab read chat hit ho:
 export const readChat = async (req, res) => {
-  const tokenUserId = req.user.userId;
-  const chatId = req.params.id; // URL se ID nikali
+  const tokenUserId = req.user.userId; // Jo user login hai
+  const chatId = req.params.id;
 
   try {
-    const chat = await prisma.chat.update({
+    const currentChat = await prisma.chat.findFirst({
       where: {
         id: chatId,
-        userIDs: {
-          hasSome: [tokenUserId],
-        },
+        userIDs: { hasSome: [tokenUserId] },
       },
-      data: {
-        seenBy: {
-          set: [tokenUserId], // Ya agar safe rehna hai to pehle fetch karke append karein, par 'set: [tokenUserId]' current user ke liye notification clear kar dega
-        },
-      },
-    });
+    })
+    
+    if (!currentChat)
+      return res.status(404).json({ message: "Chat not found" });
 
-    return res.status(200).json(chat);
+    // Agar user ne abhi tak seen nahi kiya tha, to uski ID push karein
+    if (!currentChat.seenBy.includes(tokenUserId)) {
+      await prisma.chat.update({
+        where: { id: chatId },
+        data: {
+          seenBy: {
+            push: tokenUserId,
+          },
+        },
+      });
+    }
+
+    res.status(200).json({ message: "Chat marked as read successfully" });
   } catch (err) {
-    console.error("Error in readChat:", err);
-    return res.status(500).json({ message: "Failed to read chat!" });
+    console.error(err);
+    res.status(500).json({ message: "Internal server error" });
   }
 };

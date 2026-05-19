@@ -32,6 +32,9 @@ export const initSocket = (server) => {
           users[uIdStr].push(socket.id);
         }
 
+        // 🎯 ADVANCED ROOM SETUP: Har tab ko user ke unique room mein join karwadein
+        socket.join(uIdStr);
+
         console.log(`✅ User Mapped -> [User: ${userId}] linked connections:`, users[uIdStr]);
         
         // Active users list broadcast (All active unique keys)
@@ -39,18 +42,18 @@ export const initSocket = (server) => {
       }
     });
 
-    // 🛠️ FIXED Client-to-Client Relay System (Loops through all active user socket instances)
+    // 🛠️ FIXED: Room-Based Single Emission System (Bina kisi Loop ke)
     socket.on("sendMessage", ({ receiverId, data }) => {
-      const targetSocketIds = users[String(receiverId)];
+      const uIdStr = String(receiverId);
       
-      // Checking if the target user array contains any active socket pipes
-      if (targetSocketIds && targetSocketIds.length > 0) {
-        console.log(`📩 Relaying client event to all active nodes (${targetSocketIds.length}) for user: ${receiverId}`);
+      // Check karein ke kya user online hai (kya uske room mein koi socket ids hain)
+      if (users[uIdStr] && users[uIdStr].length > 0) {
+        console.log(`📩 Relaying client event strictly ONCE to User Room: ${receiverId}`);
         
-        // Loop karke user ke har active tab ko message deliver karein taake instantaneous response mile
-        targetSocketIds.forEach((socketId) => {
-          ioInstance.to(socketId).emit("getMessage", data);
-        });
+        // 🎯 FIX: Loop chalane ki bajaye direct room mein message emit karein. 
+        // Is se har tab tak message strictly AIK hi baar pahuchega!
+        ioInstance.to(uIdStr).emit("getMessage", data);
+
       } else {
         console.log(`⚠️ User ${receiverId} is offline. Message buffered in DB.`);
       }
@@ -61,7 +64,6 @@ export const initSocket = (server) => {
       console.log("❌ Tab Closed/Disconnected:", socket.id);
       
       for (const userId in users) {
-        // Find if this socket belongs to the current user's array
         if (users[userId].includes(socket.id)) {
           // Remove only this specific closed socket ID from the array
           users[userId] = users[userId].filter((id) => id !== socket.id);
