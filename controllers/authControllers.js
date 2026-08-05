@@ -49,11 +49,12 @@ export const login = async (req, res) => {
       });
     }
 
-    // Set Cookie
+    // Cross-origin frontend and backend deployments require a secure cookie.
+    const isProduction = process.env.NODE_ENV === "production" || process.env.VERCEL === "1";
     res.cookie("token", result.token, {
       httpOnly: true,
-      secure: false, // localhost ke liye false
-      sameSite: "strict",
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
       maxAge: 24 * 60 * 60 * 1000,
     });
 
@@ -73,10 +74,11 @@ export const login = async (req, res) => {
   }
 };
 export const logout = async (req, res) => {
+  const isProduction = process.env.NODE_ENV === "production" || process.env.VERCEL === "1";
   res.clearCookie("token", {
     httpOnly: true,
-    secure: true, // same as login
-    sameSite: "strict",
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
   });
 
   return res.status(200).json({

@@ -2,10 +2,11 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import { createServer } from "node:http"; 
+import { createServer } from "node:http";
 
 import { connectDB } from "./db/db.js";
-import { initSocket } from "./socket/socket.js"; 
+import { initSocket } from "./socket/socket.js";
+import prisma from "./lib/prisma.js";
 
 import authRoute from "./routes/authRoutes.js";
 import userRoute from "./routes/userRoutes.js";
@@ -16,50 +17,75 @@ import messagesRoute from "./routes/messageRoutes.js";
 dotenv.config();
 
 const app = express();
-const server = createServer(app); 
+const server = createServer(app);
 const PORT = process.env.PORT || 3000;
-
-// 1. Middlewares (Hamesha pehle load karein)
+const isVercel = process.env.VERCEL === "1";
+const allowedOrigins = (process.env.CLIENT_URLS || process.env.CLIENT_URL || "http://localhost:5173")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 app.use(cookieParser());
 app.use(
   cors({
-    origin: process?.env?.CLIENT_URL || "http://localhost:5173",
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("Origin is not allowed by CORS"));
+    },
     credentials: true,
   }),
 );
-
 app.use(express.json());
 
-// 2. Initialize Socket.io (Middlewares ke baad safe rehta hai)
-initSocket(server);
+// Vercel Functions cannot keep a listening server or WebSocket connection alive.
+// Socket.IO remains enabled for local/long-running Node deployments.
+if (!isVercel) {
+  initSocket(server);
+}
 
-// 3. Routes
+// Wait for MongoDB before handling any route in local and serverless runtimes.
+app.use(async (_req, _res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.use("/api/auth", authRoute);
 app.use("/api/chats", chatRoute);
 app.use("/api/posts", postRoute);
 app.use("/api/users", userRoute);
 app.use("/api/messages", messagesRoute);
 
-// Database Connection
-connectDB();
-
-// Test HTTP Routes
-app.get("/", (req, res) => {
-  res.send("Hello World! API with Socket is running 🚀");
+app.get("/", (_req, res) => {
+  res.send("Real estate API is running");
 });
 
-// ⚠️ Note: Ensure 'prisma' is imported if you are debugging this route directly here
-app.get("/posts", async (req, res) => {
+app.get("/posts", async (_req, res) => {
   try {
-    const posts = await prisma.post.findMany(); 
+    const posts = await prisma.post.findMany();
     res.json(posts);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// Listen using HTTP server instance
-server.listen(PORT, () => {
-  console.log(`🚀 Single instance server running on port ${PORT}`);
+app.use((error, _req, res, _next) => {
+  console.error("Unhandled API error:", error);
+  res.status(error.status || 500).json({
+    message: error.message || "Internal server error",
+  });
 });
+
+if (!isVercel) {
+  server.listen(PORT, () => {
+    console.log(`API server running on port ${PORT}`);
+  });
+}
+
+export default app;
