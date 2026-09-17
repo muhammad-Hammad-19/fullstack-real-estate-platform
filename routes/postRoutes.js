@@ -18,12 +18,12 @@ const router = express.Router();
 // router.get("/", getPostsForFilter)
 
 
-router.get("/", authMiddleware, getPosts);
+router.get("/", getPosts);
 
 // GET SINGLE POST DETAILS (Specific dynamic route description)
 
 // Note: Isko static ya sub-route constraints ke sath banna behtar hai taake direct generic /:id se conflict na kare
-router.get("/:id/details", authMiddleware, getPostDetails);
+router.get("/:id/details", getPostDetails);
 
 // GET USERS ALL POSTS
 
